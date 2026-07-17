@@ -2,70 +2,26 @@
 
 ## Install on a VPS
 
-Prism requires Python 3.10 or newer. The following commands clone the repository, create an isolated virtual environment, install Prism, and run the local tests. They do not require Kalshi credentials and do not place trades.
-
-### 1. Install system prerequisites
-
-On Ubuntu or Debian:
-
-```bash
-sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
-```
-
-### 2. Clone Prism from GitHub
+Requires Python 3.10+. On Ubuntu/Debian, install `git`, `python3`, and `python3-venv` if they are not already installed, then run:
 
 ```bash
 git clone https://github.com/benjaminbencsik/Prisim.git
 cd Prisim
-```
-
-If you already cloned it, update the local checkout instead:
-
-```bash
-cd Prisim
-git pull origin main
-```
-
-### 3. Create and activate a virtual environment
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-You should see `(.venv)` at the beginning of your shell prompt. Activate it again whenever you reconnect to the VPS:
-
-```bash
-cd ~/Prisim
-source .venv/bin/activate
-```
-
-### 4. Install Prism
-
-Recommended: install the local package. This reads `pyproject.toml`, installs `cryptography`, and makes the `prism` command available:
-
-```bash
 python -m pip install --upgrade pip
 python -m pip install .
-```
-
-Alternative: if your VPS workflow uses `requirements.txt`:
-
-```bash
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-### 5. Verify the installation
-
-```bash
 python -m unittest discover -s tests -v
-prism --help
 prism doctor
 ```
 
-The default configuration is demo environment, dry-run mode, and no live credentials. A successful `prism doctor` output should show `"dry_run": true`.
+The default is demo mode with dry-run orders, so this setup does not require credentials or place trades. After reconnecting to the VPS:
+
+```bash
+cd ~/Prisim && source .venv/bin/activate
+```
+
+To update an existing checkout, run `git pull origin main` from the `Prisim` directory. If you prefer the requirements workflow, use `python -m pip install -r requirements.txt` before `python -m pip install -e .`.
 
 ## Configure
 
