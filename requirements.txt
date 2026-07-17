@@ -1,0 +1,2 @@
+# Runtime dependency for Kalshi RSA-PSS request signing.
+cryptography>=41.0

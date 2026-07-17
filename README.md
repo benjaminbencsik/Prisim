@@ -12,6 +12,22 @@ python3 -m venv .venv
 python -m pip install .
 ```
 
+The project metadata installs the runtime dependency automatically. If your VPS workflow specifically uses `requirements.txt`, use this equivalent sequence instead:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+After cloning, you can verify the installation without Kalshi credentials:
+
+```bash
+python -m unittest discover -s tests -v
+prism doctor
+```
+
 ## Configure
 
 Copy `.env.example` to your shell environment (Prism intentionally does not load `.env` automatically):
