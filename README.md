@@ -1,32 +1,71 @@
 # Prism
 
-Prism is a portable Python CLI for inspecting Kalshi markets and managing trades. It is designed for a VPS, uses Kalshi's v2 REST API, and defaults to **demo environment + dry-run orders** so an accidental command cannot place live trades.
+## Install on a VPS
 
-## Install
+Prism requires Python 3.10 or newer. The following commands clone the repository, create an isolated virtual environment, install Prism, and run the local tests. They do not require Kalshi credentials and do not place trades.
 
-Requires Python 3.10+.
+### 1. Install system prerequisites
+
+On Ubuntu or Debian:
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip
+```
+
+### 2. Clone Prism from GitHub
+
+```bash
+git clone https://github.com/benjaminbencsik/Prisim.git
+cd Prisim
+```
+
+If you already cloned it, update the local checkout instead:
+
+```bash
+cd Prisim
+git pull origin main
+```
+
+### 3. Create and activate a virtual environment
 
 ```bash
 python3 -m venv .venv
-. .venv/bin/activate
+source .venv/bin/activate
+```
+
+You should see `(.venv)` at the beginning of your shell prompt. Activate it again whenever you reconnect to the VPS:
+
+```bash
+cd ~/Prisim
+source .venv/bin/activate
+```
+
+### 4. Install Prism
+
+Recommended: install the local package. This reads `pyproject.toml`, installs `cryptography`, and makes the `prism` command available:
+
+```bash
+python -m pip install --upgrade pip
 python -m pip install .
 ```
 
-The project metadata installs the runtime dependency automatically. If your VPS workflow specifically uses `requirements.txt`, use this equivalent sequence instead:
+Alternative: if your VPS workflow uses `requirements.txt`:
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-After cloning, you can verify the installation without Kalshi credentials:
+### 5. Verify the installation
 
 ```bash
 python -m unittest discover -s tests -v
+prism --help
 prism doctor
 ```
+
+The default configuration is demo environment, dry-run mode, and no live credentials. A successful `prism doctor` output should show `"dry_run": true`.
 
 ## Configure
 
