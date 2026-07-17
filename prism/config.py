@@ -16,6 +16,7 @@ class Config:
     max_order_cost_cents: int = 10000
     max_open_orders: int = 20
     kill_switch: bool = False
+    live_trading_enabled: bool = False
 
     @property
     def base_url(self) -> str:
@@ -40,4 +41,5 @@ class Config:
             max_order_cost_cents=int(os.getenv("PRISM_MAX_ORDER_COST_CENTS", "10000")),
             max_open_orders=int(os.getenv("PRISM_MAX_OPEN_ORDERS", "20")),
             kill_switch=os.getenv("PRISM_KILL_SWITCH", "false").lower() in {"1", "true", "yes"},
+            live_trading_enabled=os.getenv("PRISM_LIVE_TRADING", "false").lower() in {"1", "true", "yes"},
         )

@@ -21,5 +21,7 @@ def validate_order(order: dict, config: Config, storage: Storage, confirm_live: 
         raise RiskError(f"maximum open orders reached ({config.max_open_orders})")
     if config.kill_switch:
         raise RiskError("kill switch is active; set PRISM_KILL_SWITCH=false to submit orders")
+    if not config.dry_run and not config.live_trading_enabled:
+        raise RiskError("live trading is disabled; set PRISM_LIVE_TRADING=enabled explicitly")
     if not config.dry_run and not confirm_live:
         raise RiskError("live order blocked: pass --confirm-live explicitly")

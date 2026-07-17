@@ -23,6 +23,15 @@ def build_parser() -> argparse.ArgumentParser:
     markets.add_argument("--status", default=None)
     market = sub.add_parser("market", help="Show one market")
     market.add_argument("ticker")
+    book = sub.add_parser("book", help="Show market order book")
+    book.add_argument("ticker")
+    book.add_argument("--depth", type=int)
+    trades = sub.add_parser("trades", help="Show recent market trades")
+    trades.add_argument("ticker")
+    trades.add_argument("--limit", type=int, default=100)
+    search = sub.add_parser("search", help="Search currently returned markets")
+    search.add_argument("query")
+    search.add_argument("--limit", type=int, default=100)
     sub.add_parser("balance", help="Show account balance")
     positions = sub.add_parser("positions", help="Show positions")
     positions.add_argument("--ticker")
@@ -35,6 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
     cancel.add_argument("order_id")
     cancel.add_argument("--confirm-live", action="store_true")
     sub.add_parser("doctor", help="Validate local configuration")
+    sub.add_parser("fills", help="Show locally stored fills")
+    sub.add_parser("pnl", help="Show fill cash-flow summary")
+    sub.add_parser("reconcile", help="Refresh local orders and fills from Kalshi")
     order = sub.add_parser("order", help="Create an order (dry-run by default)")
     order.add_argument("ticker")
     order.add_argument("--action", choices=["buy", "sell"], required=True)
@@ -56,6 +68,15 @@ def main(argv: list[str] | None = None) -> int:
             result = client.markets(args.limit, args.status)
         elif args.command == "market":
             result = client.market(args.ticker)
+        elif args.command == "book":
+            result = client.orderbook(args.ticker, args.depth)
+        elif args.command == "trades":
+            result = client.trades(args.ticker, args.limit)
+        elif args.command == "search":
+            payload = client.markets(args.limit)
+            query = args.query.lower()
+            result = {"markets": [market for market in payload.get("markets", [])
+                                   if query in json.dumps(market).lower()]}
         elif args.command == "balance":
             result = client.balance()
         elif args.command == "positions":
@@ -72,7 +93,27 @@ def main(argv: list[str] | None = None) -> int:
             result = {"environment": config.environment, "dry_run": config.dry_run,
                       "database": str(config.database_path), "credentials_configured": client.signer is not None,
                       "private_api_ready": client.signer is not None,
-                      "kill_switch": config.kill_switch, "status": "ok"}
+                      "kill_switch": config.kill_switch,
+                      "live_trading_enabled": config.live_trading_enabled, "status": "ok"}
+        elif args.command == "fills":
+            result = {"fills": storage.fills()}
+        elif args.command == "pnl":
+            result = storage.cashflow()
+        elif args.command == "reconcile":
+            if not client.signer:
+                raise KalshiError("reconcile requires Kalshi API credentials")
+            remote_orders = client.orders()
+            updated = 0
+            for remote in remote_orders.get("orders", []):
+                order_id = remote.get("order_id")
+                status = remote.get("status")
+                if order_id and status:
+                    storage.update_status(order_id, status, remote)
+                    updated += 1
+            fills_payload = client.fills()
+            stored_fills = storage.record_fills(fills_payload)
+            result = {"orders_seen": len(remote_orders.get("orders", [])),
+                      "orders_updated": updated, "fills_stored": stored_fills}
         else:
             order_request = {
                 "ticker": args.ticker, "client_order_id": args.client_order_id or str(uuid.uuid4()),

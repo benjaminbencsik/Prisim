@@ -1,0 +1,16 @@
+[Unit]
+Description=Prism Kalshi worker placeholder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=prism
+WorkingDirectory=/opt/Prisim
+EnvironmentFile=/etc/prism/prism.env
+ExecStart=/opt/Prisim/.venv/bin/prism doctor
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

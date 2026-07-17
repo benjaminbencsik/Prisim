@@ -61,6 +61,15 @@ class KalshiClient:
     def market(self, ticker: str) -> dict:
         return self.request("GET", f"/markets/{ticker}")
 
+    def orderbook(self, ticker: str, depth: int | None = None) -> dict:
+        return self.request("GET", f"/markets/{ticker}/orderbook", {"depth": depth})
+
+    def trades(self, ticker: str, limit: int = 100, cursor: str | None = None) -> dict:
+        return self.request("GET", f"/markets/{ticker}/trades", {"limit": limit, "cursor": cursor})
+
+    def fills(self, ticker: str | None = None, limit: int = 100, cursor: str | None = None) -> dict:
+        return self.request("GET", "/portfolio/fills", {"ticker": ticker, "limit": limit, "cursor": cursor})
+
     def balance(self) -> dict:
         return self.request("GET", "/portfolio/balance")
 

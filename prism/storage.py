@@ -23,6 +23,11 @@ class Storage:
                 status TEXT NOT NULL, request_json TEXT NOT NULL, response_json TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )""")
+            db.execute("""CREATE TABLE IF NOT EXISTS fills (
+                fill_id TEXT PRIMARY KEY, order_id TEXT, ticker TEXT NOT NULL,
+                side TEXT, action TEXT, count INTEGER, price INTEGER,
+                raw_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""")
 
     def record_order(self, request: dict, response: dict, status: str) -> None:
         client_id = request["client_order_id"]
@@ -52,3 +57,29 @@ class Storage:
         query += " ORDER BY created_at DESC"
         with self._connect() as db:
             return [dict(row) for row in db.execute(query, args).fetchall()]
+
+    def record_fills(self, payload: dict) -> int:
+        fills = payload.get("fills", [])
+        with self._connect() as db:
+            for fill in fills:
+                fill_id = fill.get("fill_id") or fill.get("id")
+                if not fill_id:
+                    continue
+                db.execute("""INSERT OR REPLACE INTO fills
+                    (fill_id, order_id, ticker, side, action, count, price, raw_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", (
+                    fill_id, fill.get("order_id"), fill.get("ticker", "unknown"),
+                    fill.get("side"), fill.get("action"), fill.get("count"),
+                    fill.get("yes_price") or fill.get("no_price") or fill.get("price"), json.dumps(fill)))
+        return len(fills)
+
+    def fills(self) -> list[dict]:
+        with self._connect() as db:
+            return [dict(row) for row in db.execute("SELECT * FROM fills ORDER BY created_at DESC").fetchall()]
+
+    def cashflow(self) -> dict:
+        """Return fill cash flow; this is not mark-to-market P&L."""
+        rows = self.fills()
+        buy = sum((row["price"] or 0) * (row["count"] or 0) for row in rows if row["action"] == "buy")
+        sell = sum((row["price"] or 0) * (row["count"] or 0) for row in rows if row["action"] == "sell")
+        return {"fills": len(rows), "buy_cents": buy, "sell_cents": sell, "net_cashflow_cents": sell - buy}

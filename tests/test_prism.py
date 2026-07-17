@@ -57,6 +57,15 @@ class PrismTests(unittest.TestCase):
             with self.assertRaisesRegex(RiskError, "kill switch"):
                 validate_order({"ticker": "T", "count": 1, "yes_price": 30}, config, Storage(config.database_path))
 
+    def test_fill_cashflow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = Storage(Path(directory) / "p.db")
+            storage.record_fills({"fills": [
+                {"fill_id": "b1", "ticker": "T", "action": "buy", "count": 2, "price": 30},
+                {"fill_id": "s1", "ticker": "T", "action": "sell", "count": 1, "price": 50},
+            ]})
+            self.assertEqual(storage.cashflow()["net_cashflow_cents"], -10)
+
 
 if __name__ == "__main__":
     unittest.main()

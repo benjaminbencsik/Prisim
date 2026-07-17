@@ -41,9 +41,15 @@ The private key must be an unencrypted PEM RSA key downloaded from Kalshi. Keep 
 ```bash
 prism markets --limit 10
 prism market TICKER
+prism search "keyword"
+prism book TICKER
+prism trades TICKER
 prism balance
 prism positions
 prism orders --status resting
+prism fills
+prism pnl
+prism reconcile
 prism order-status ORDER_ID
 prism cancel ORDER_ID
 prism doctor
@@ -70,6 +76,8 @@ Every simulated or submitted order is recorded in the SQLite database configured
 - Explicit `--confirm-live` for live orders and cancellations
 
 The API client retries transient HTTP and network failures with short exponential backoff. Use `prism doctor` to inspect environment, credential presence, private-API readiness, database path, and kill-switch state without printing secrets. `orders`, `balance`, `positions`, and order lifecycle commands require credentials; a missing or invalid key will return an API authentication error.
+
+`prism reconcile` refreshes local order statuses and stores fills from Kalshi. `prism pnl` reports fill cash flow only: it is not a mark-to-market P&L calculation. A sample systemd unit is provided at `systemd/prism.service.example`; customize it before enabling a service.
 
 These controls do not constitute a trading strategy or guarantee against losses. Do not enable unattended live trading until you have independently tested reconciliation, account limits, and your intended strategy in the demo environment.
 
