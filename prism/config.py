@@ -12,6 +12,10 @@ class Config:
     environment: str = "demo"
     dry_run: bool = True
     timeout: float = 20.0
+    database_path: Path = Path("prism.db")
+    max_order_cost_cents: int = 10000
+    max_open_orders: int = 20
+    kill_switch: bool = False
 
     @property
     def base_url(self) -> str:
@@ -32,4 +36,8 @@ class Config:
             environment=environment,
             dry_run=dry_run,
             timeout=float(os.getenv("PRISM_TIMEOUT", "20")),
+            database_path=Path(os.getenv("PRISM_DATABASE", "prism.db")).expanduser(),
+            max_order_cost_cents=int(os.getenv("PRISM_MAX_ORDER_COST_CENTS", "10000")),
+            max_open_orders=int(os.getenv("PRISM_MAX_OPEN_ORDERS", "20")),
+            kill_switch=os.getenv("PRISM_KILL_SWITCH", "false").lower() in {"1", "true", "yes"},
         )

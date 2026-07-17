@@ -32,6 +32,10 @@ prism markets --limit 10
 prism market TICKER
 prism balance
 prism positions
+prism orders --status resting
+prism order-status ORDER_ID
+prism cancel ORDER_ID
+prism doctor
 prism order TICKER --action buy --side yes --count 1 --price 35
 ```
 
@@ -43,6 +47,20 @@ KALSHI_ENV=prod PRISM_DRY_RUN=false prism order TICKER \
 ```
 
 Review the market, price, count, and account before live use. Prism is an execution client, not financial advice or an automated strategy.
+
+## Safety and local audit history
+
+Every simulated or submitted order is recorded in the SQLite database configured by `PRISM_DATABASE` (default: `prism.db`). The database is local-only and ignored by Git. Before an order is sent, Prism enforces:
+
+- Dry-run mode unless explicitly disabled
+- A per-order cost ceiling with `PRISM_MAX_ORDER_COST_CENTS`
+- A maximum number of open local orders with `PRISM_MAX_OPEN_ORDERS`
+- An emergency stop using `PRISM_KILL_SWITCH=true`
+- Explicit `--confirm-live` for live orders and cancellations
+
+The API client retries transient HTTP and network failures with short exponential backoff. Use `prism doctor` to inspect environment, credential presence, private-API readiness, database path, and kill-switch state without printing secrets. `orders`, `balance`, `positions`, and order lifecycle commands require credentials; a missing or invalid key will return an API authentication error.
+
+These controls do not constitute a trading strategy or guarantee against losses. Do not enable unattended live trading until you have independently tested reconciliation, account limits, and your intended strategy in the demo environment.
 
 ## Development
 

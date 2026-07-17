@@ -1,12 +1,16 @@
 import io
 import json
 import os
+from pathlib import Path
 import unittest
+import tempfile
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 from prism.cli import main
 from prism.config import Config
+from prism.risk import RiskError, validate_order
+from prism.storage import Storage
 
 
 class PrismTests(unittest.TestCase):
@@ -33,6 +37,25 @@ class PrismTests(unittest.TestCase):
             result = main(["order", "TEST", "--action", "buy", "--side", "yes", "--count", "1", "--price", "100"])
         self.assertEqual(result, 2)
         self.assertIn("price must be", stderr.getvalue())
+
+    def test_risk_limit_blocks_expensive_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(None, None, max_order_cost_cents=50, database_path=Path(directory) / "p.db")
+            with self.assertRaises(RiskError):
+                validate_order({"ticker": "T", "count": 2, "yes_price": 30}, config, Storage(config.database_path))
+
+    def test_storage_records_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            storage = Storage(Path(directory) / "p.db")
+            request = {"client_order_id": "abc", "ticker": "T"}
+            storage.record_order(request, {"dry_run": True}, "dry_run")
+            self.assertEqual(storage.orders()[0]["client_order_id"], "abc")
+
+    def test_kill_switch_blocks_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Config(None, None, kill_switch=True, database_path=Path(directory) / "p.db")
+            with self.assertRaisesRegex(RiskError, "kill switch"):
+                validate_order({"ticker": "T", "count": 1, "yes_price": 30}, config, Storage(config.database_path))
 
 
 if __name__ == "__main__":

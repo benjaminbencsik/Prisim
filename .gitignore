@@ -7,3 +7,5 @@ venv/
 .pytest_cache/
 dist/
 build/
+prism.db
+*.sqlite3

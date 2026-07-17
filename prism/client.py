@@ -1,6 +1,7 @@
 """Small stdlib HTTP client for Kalshi's v2 API."""
 
 import json
+import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -38,14 +39,21 @@ class KalshiClient:
             headers.update(self.signer.headers(method, f"/trade-api/v2{path}"))
         request = Request(url, method=method.upper(), headers=headers,
                           data=json.dumps(body).encode() if body is not None else None)
-        try:
-            with urlopen(request, timeout=self.config.timeout) as response:
-                return json.loads(response.read().decode())
-        except HTTPError as exc:
-            detail = exc.read().decode(errors="replace")
-            raise KalshiError(f"Kalshi HTTP {exc.code}: {detail}") from exc
-        except URLError as exc:
-            raise KalshiError(f"Unable to reach Kalshi: {exc.reason}") from exc
+        for attempt in range(3):
+            try:
+                with urlopen(request, timeout=self.config.timeout) as response:
+                    return json.loads(response.read().decode())
+            except HTTPError as exc:
+                detail = exc.read().decode(errors="replace")
+                if exc.code in {429, 500, 502, 503, 504} and attempt < 2:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise KalshiError(f"Kalshi HTTP {exc.code}: {detail}") from exc
+            except URLError as exc:
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise KalshiError(f"Unable to reach Kalshi: {exc.reason}") from exc
 
     def markets(self, limit: int = 20, status: str | None = None, cursor: str | None = None) -> dict:
         return self.request("GET", "/markets", {"limit": limit, "status": status, "cursor": cursor})
@@ -58,6 +66,19 @@ class KalshiClient:
 
     def positions(self, ticker: str | None = None) -> dict:
         return self.request("GET", "/portfolio/positions", {"ticker": ticker})
+
+    def orders(self, status: str | None = None, ticker: str | None = None) -> dict:
+        return self.request("GET", "/portfolio/orders", {"status": status, "ticker": ticker})
+
+    def order(self, order_id: str) -> dict:
+        return self.request("GET", f"/portfolio/orders/{order_id}")
+
+    def cancel_order(self, order_id: str) -> dict:
+        if self.config.dry_run:
+            return {"dry_run": True, "order_id": order_id, "status": "canceled"}
+        if not self.signer:
+            raise KalshiError("Live cancellation requires API credentials")
+        return self.request("DELETE", f"/portfolio/orders/{order_id}")
 
     def create_order(self, order: dict) -> dict:
         if self.config.dry_run:
